@@ -1,0 +1,29 @@
+.glasses-option {
+    width: 100px;
+    height: auto;
+    transition: transform 0.2s;
+}
+
+.glasses-option:hover {
+    transform: scale(1.1);
+}
+
+.drop-overlay {
+    background-color: rgba(255, 255, 255, 0.8);
+    font-size: 1.2em;
+    color: #666;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+#canvasDropZone {
+
+    border: 2px dashed #ccc;
+
+}
+#canvasContainer.dragging #canvasDropZone {
+    pointer-events: auto;
+}
+
+#canvasContainer.dragging .drop-overlay {
+    opacity: 1;
+}
