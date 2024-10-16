@@ -1,127 +1,96 @@
-const canvas = new fabric.Canvas('canvas', { preserveObjectStacking: true });
-let overlayImage;
-let baseImageLoaded = false;
+// Elementos del DOM
+const dropZone = document.getElementById("dropZone");
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+const resetBtn = document.getElementById('resetBtn');
+const downloadBtn = document.getElementById('downloadBtn');
+const imageSelector = document.getElementById('imageSelector');
+const baseImageUpload = document.getElementById('baseImageUpload');
 
-const canvasContainer = document.getElementById('canvasContainer');
-const glassesCatalog = document.getElementById('glassesCatalog');
+// Variables para almacenar imágenes
+let baseImage = null;
+let overlayImage = null;
 
-function handleDrop(e) {
-    e.preventDefault();
-    e.stopPropagation();
-    canvasContainer.classList.remove('dragging');
+// Funciones principales
+function drawImage(imageSrc, isBaseImage = false) {
+    const img = new Image();
+    img.onload = () => {
+        if (isBaseImage) {
+            canvas.width = img.width;
+            canvas.height = img.height;
+            baseImage = img;
+            overlayImage = null;
+        } else {
+            overlayImage = img;
+        }
+        redrawCanvas();
+    };
+    img.src = imageSrc;
+}
 
-    const file = e.dataTransfer.files[0];
-    if (file && file.type.startsWith('image/')) {
-        loadImageBase(file);
+function redrawCanvas() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    if (baseImage) {
+        ctx.drawImage(baseImage, 0, 0);
+    }
+
+    if (overlayImage) {
+        ctx.drawImage(overlayImage, 50, 50, overlayImage.width / 2, overlayImage.height / 2);
+    }
+
+    canvas.classList.remove('d-none');
+}
+
+function downloadCanvasImage() {
+    if (canvas.width > 0 && canvas.height > 0) {
+        const link = document.createElement('a');
+        link.href = canvas.toDataURL('image/png');
+        link.download = 'imagen_generada.png';
+        link.click();
+    } else {
+        alert("No hay una imagen para descargar.");
     }
 }
 
-// Eventos para drag and drop
-['dragenter', 'dragleave', 'dragover', 'drop'].forEach(eventName => {
-    canvasContainer.addEventListener(eventName, (e) => {
+function resetCanvas() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    canvas.classList.add('d-none');
+    canvas.width = canvas.height = 0;
+    baseImage = null;
+    overlayImage = null;
+}
+
+function handleFileUpload(file) {
+    if (file && file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = (event) => drawImage(event.target.result, true);
+        reader.readAsDataURL(file);
+    }
+}
+
+// Event Listeners
+baseImageUpload.addEventListener('change', (event) => handleFileUpload(event.target.files[0]));
+
+imageSelector.addEventListener('click', (event) => {
+    const button = event.target.closest('button');
+    if (button?.dataset.imageSrc) {
+        drawImage(button.dataset.imageSrc, false);
+    }
+});
+
+downloadBtn.addEventListener('click', downloadCanvasImage);
+resetBtn.addEventListener('click', resetCanvas);
+
+// Manejo de eventos de arrastre
+['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+    dropZone.addEventListener(eventName, (e) => {
         e.preventDefault();
         e.stopPropagation();
-        
-        if (eventName === 'dragenter') {
-            canvasContainer.classList.add('dragging');
-        } else if (eventName === 'dragleave' && !canvasContainer.contains(e.relatedTarget)) {
-            canvasContainer.classList.remove('dragging');
-        } else if (eventName === 'drop') {
-            handleDrop(e);
-        }
+        dropZone.classList.toggle('dragging', ['dragenter', 'dragover'].includes(eventName));
     });
 });
 
-function loadImageBase(file) {
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        fabric.Image.fromURL(e.target.result, function(img) {
-            canvas.clear();
-            canvas.setBackgroundImage(img, canvas.renderAll.bind(canvas), {
-                scaleX: canvas.width / img.width,
-                scaleY: canvas.height / img.height
-            });
-            baseImageLoaded = true;
-            enableGlassesCatalog();
-        });
-    };
-    reader.readAsDataURL(file);
-}
-
-// Cargar imagen base desde el botón de subir archivos
-document.getElementById('baseImageUpload').addEventListener('change', function(event) {
-    const file = event.target.files[0];
-    if (file && file.type.startsWith('image/')) {
-        loadImageBase(file);
-    }
-});
-
-// Función para cargar imagen superpuesta
-function loadOverlayImage(selectedImage) {
-    if (!baseImageLoaded) {
-        alert('Por favor, carga una imagen base primero.');
-        return;
-    }
-
-    fabric.Image.fromURL(selectedImage, function(img) {
-        if (overlayImage) {
-            canvas.remove(overlayImage);
-        }
-        overlayImage = img;
-        overlayImage.set({
-            left: 100,
-            top: 100,
-            scaleX: 0.5,
-            scaleY: 0.5,
-            angle: 0,
-            selectable: true
-        });
-        canvas.add(overlayImage);
-        canvas.bringToFront(overlayImage);
-    });
-}
-
-// Habilitar/deshabilitar catálogo de gafas
-function enableGlassesCatalog() {
-    glassesCatalog.classList.remove('disabled');
-    glassesCatalog.querySelectorAll('.glasses-option').forEach(option => {
-        option.style.pointerEvents = 'auto';
-        option.style.opacity = '1';
-    });
-}
-
-function disableGlassesCatalog() {
-    glassesCatalog.classList.add('disabled');
-    glassesCatalog.querySelectorAll('.glasses-option').forEach(option => {
-        option.style.pointerEvents = 'none';
-        option.style.opacity = '0.5';
-    });
-}
-
-// Inicialmente deshabilitar el catálogo de gafas
-disableGlassesCatalog();
-
-// Selección de imagen superpuesta desde el catálogo
-glassesCatalog.addEventListener('click', function(event) {
-    if (event.target.classList.contains('glasses-option')) {
-        const selectedImage = event.target.getAttribute('data-src');
-        if (selectedImage) {
-            loadOverlayImage(selectedImage);
-        }
-    }
-});
-
-// Descargar imagen editada
-document.getElementById('downloadButton').addEventListener('click', function() {
-    if (!baseImageLoaded) {
-        alert('Por favor, carga una imagen base primero.');
-        return;
-    }
-    const link = document.createElement('a');
-    link.download = 'imagen-editada.png';
-    link.href = canvas.toDataURL({
-        format: 'png',
-        quality: 1.0
-    });
-    link.click();
+dropZone.addEventListener("drop", (e) => {
+    handleFileUpload(e.dataTransfer.files[0]);
 });
