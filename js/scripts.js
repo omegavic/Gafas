@@ -1,85 +1,147 @@
+// Constantes y variables globales
 const canvas = new fabric.Canvas('canvas');
-const fileInput = document.getElementById('baseImageUpload');
-const dropZone = document.getElementById('dropZone');
-const presentation = document.getElementById('presentation');
 const canvasContainer = document.getElementById('canvasContainer');
-const imageSelector = document.getElementById('imageSelector');
-const imageButton = document.getElementById('imageButton');
-function resizeCanvas() {
-    canvas.setWidth(canvasContainer.offsetWidth);
-    canvas.setHeight(canvasContainer.offsetHeight);
-    canvas.renderAll();
-}
-
-function showCanvas() {
-    presentation.classList.add('hidden');
-}
-
-
-function loadImage(file) {
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        fabric.Image.fromURL(e.target.result, function(img) {
-            canvas.clear();
-            canvas.setBackgroundImage(img, canvas.renderAll.bind(canvas), {
-                scaleX: canvas.width / img.width,
-                scaleY: canvas.height / img.height
-            });
-            showCanvas();
-        });
-    };
-    reader.readAsDataURL(file);
-}
-
-
+const presentation = document.getElementById('presentation');
 let currentSelectorImage = null;
 
+// Elementos del DOM
+const elements = {
+  fileInput: document.getElementById('baseImageUpload'),
+  dropZone: document.getElementById('dropZone'),
+  imageSelector: document.getElementById('imageSelector'),
+  downloadBtn: document.getElementById('downloadBtn'),
+  resetBtn: document.getElementById('resetBtn')
+};
+
+// Funciones principales
+function resizeCanvas() {
+  canvas.setDimensions({
+    width: canvasContainer.offsetWidth,
+    height: canvasContainer.offsetHeight
+  });
+  canvas.renderAll();
+}
+
+function loadImage(file) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    fabric.Image.fromURL(e.target.result, (img) => {
+      canvas.clear();
+      canvas.setBackgroundImage(img, canvas.renderAll.bind(canvas), {
+        scaleX: canvas.width / img.width,
+        scaleY: canvas.height / img.height
+      });
+      elements.imageSelector.classList.remove('disabled');
+      presentation.classList.add('hidden');
+    });
+  };
+  reader.readAsDataURL(file);
+}
 
 function addImageToCanvas(imageSrc) {
-    if (currentSelectorImage) {
-        canvas.remove(currentSelectorImage);
-    }
-    fabric.Image.fromURL(imageSrc, function(img) {
-        img.scaleToWidth(100); // Ajusta este valor según tus necesidades
-        img.set({
-            left: canvas.width / 2,
-            top: canvas.height / 2,
-            originX: 'center',
-            originY: 'center'
-        });
-        currentSelectorImage = img;
-        canvas.add(img);
-        canvas.setActiveObject(img);
+    if (!canvas.backgroundImage) {
+        alert('Por favor, carga una imagen base primero.');
+        return;
+      }
+  if (currentSelectorImage) {
+    canvas.remove(currentSelectorImage);
+  }
+  fabric.Image.fromURL(imageSrc, (img) => {
+    img.scaleToWidth(100);
+    img.set({
+      left: canvas.width / 2,
+      top: canvas.height / 2,
+      originX: 'center',
+      originY: 'center'
     });
+    currentSelectorImage = img;
+    canvas.add(img).setActiveObject(img);
+  });
 }
-imageSelector.addEventListener('click', function(e) {
-    if (e.target.closest('button')) {
-        const button = e.target.closest('button');
-        const imageSrc = button.getAttribute('data-image-src');
-        if (imageSrc) {
-            addImageToCanvas(imageSrc);
+
+function downloadCanvas() {
+  const link = document.createElement('a');
+  link.href = canvas.toDataURL({ format: 'png', quality: 1 });
+  link.download = 'imagen_editada.png';
+  link.click();
+}
+
+function resetCanvas() {
+  canvas.clear();
+  presentation.classList.remove('hidden');
+  currentSelectorImage = null;
+  elements.imageSelector.classList.add('disabled');
+}
+let warningTimeout;
+
+function showWarning() {
+    clearTimeout(warningTimeout);
+    const warning = document.getElementById('imageSelectorWarning');
+    warning.classList.remove('hidden');
+    warning.classList.add('fade-in');
+    warning.classList.remove('fade-out');
+    
+    warningTimeout = setTimeout(() => {
+        warning.classList.remove('fade-in');
+        warning.classList.add('fade-out');
+        setTimeout(() => {
+            warning.classList.add('hidden');
+        }, 500); // Duración de la animación de desvanecimiento
+    }, 3000); // Duración de la advertencia visible
+}
+// Event listeners
+function setupEventListeners() {
+    elements.imageSelector.addEventListener('click', (e) => {
+        if (elements.imageSelector.classList.contains('disabled')) {
+            showWarning();
+            return;
         }
-    }
-});
+        const button = e.target.closest('button');
+        if (button) {
+            const imageSrc = button.getAttribute('data-image-src');
+            if (imageSrc) addImageToCanvas(imageSrc);
+        }
+    });
 
-fileInput.addEventListener('change', function(e) {
-    if (e.target.files && e.target.files[0]) {
-        loadImage(e.target.files[0]);
-    }
-});
+  elements.fileInput.addEventListener('change', (e) => {
+    if (e.target.files?.[0]) loadImage(e.target.files[0]);
+  });
 
-dropZone.addEventListener('dragover', function(e) {
+  elements.dropZone.addEventListener('dragenter', (e) => {
     e.preventDefault();
     e.stopPropagation();
-});
+    elements.dropZone.classList.add('dragover');
+  });
 
-dropZone.addEventListener('drop', function(e) {
+  elements.dropZone.addEventListener('dragleave', (e) => {
     e.preventDefault();
     e.stopPropagation();
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-        loadImage(e.dataTransfer.files[0]);
-    }
-});
+    elements.dropZone.classList.remove('dragover');
+  });
 
-window.addEventListener('resize', resizeCanvas);
-resizeCanvas();
+  elements.dropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    elements.dropZone.classList.add('dragover');
+  });
+
+  elements.dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    elements.dropZone.classList.remove('dragover');
+    if (e.dataTransfer.files?.[0]) loadImage(e.dataTransfer.files[0]);
+  });
+
+  elements.downloadBtn.addEventListener('click', downloadCanvas);
+  elements.resetBtn.addEventListener('click', resetCanvas);
+
+  window.addEventListener('resize', resizeCanvas);
+}
+
+// Inicialización
+function init() {
+  setupEventListeners();
+  resizeCanvas();
+}
+
+init();

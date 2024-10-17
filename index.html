@@ -49,7 +49,7 @@
                             <canvas id="canvas" class="pointer-events-auto w-full h-full" width="600" height="400"></canvas>
                         </div>
                     </div>
-                    <div id="imageSelector" class="flex flex-row justify-center w-full p-2 overflow-x-auto bg-gray-100">
+                    <div id="imageSelector" class="disabled flex flex-row justify-center w-full p-2 overflow-x-auto bg-gray-100">
                         <button id="imageButton" class="flex flex-col items-center mr-3" data-image-src="img/Gafas1.png">
                             <img src="img/Gafas1.png" class="object-contain h-16 w-16">
                             <span class="text-sm">Gizmo 1</span>
@@ -59,6 +59,9 @@
                             <span class="text-sm">Gizmo 2</span>
                         </button>  
                         <input type="file" class="hidden" id="imageSelected" accept="image/*">   
+                    </div>
+                    <div id="imageSelectorWarning" class="hidden">
+                        <p>Por favor, carga una imagen base primero.</p>
                     </div>
                 </div>
             </div>
