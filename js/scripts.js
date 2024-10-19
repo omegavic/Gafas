@@ -40,7 +40,7 @@ function loadImage(file) {
 
 function addImageToCanvas(imageSrc) {
     if (!canvas.backgroundImage) {
-        alert('Por favor, carga una imagen base primero.');
+        alert('Please load a base image first.');
         return;
       }
   if (currentSelectorImage) {
@@ -62,7 +62,7 @@ function addImageToCanvas(imageSrc) {
 function downloadCanvas() {
   const link = document.createElement('a');
   link.href = canvas.toDataURL({ format: 'png', quality: 1 });
-  link.download = 'imagen_editada.png';
+  link.download = 'runes_rocks_Image.png';
   link.click();
 }
 
